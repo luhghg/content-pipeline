@@ -1,9 +1,11 @@
 from app.db.session import Base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, func, ForeignKey, Text, BigInteger
+from sqlalchemy import String, func, ForeignKey, Text, BigInteger, Integer, Numeric
 from enum import Enum
 from datetime import datetime
 from typing import List, Optional
+from decimal import Decimal
+
 
 class ContentType(Enum):
     ARTICLE = "article"
@@ -24,7 +26,9 @@ class ApprovalType(Enum):
     MANUAL = "manual"
     AUTOMATIC = "automatic"
 
-
+class Purpose(Enum):
+    GENERATION = "generation"
+    QUALITYCHECK = "quality_check"
 
 class Topic(Base):
     __tablename__ = "topics"
@@ -73,3 +77,24 @@ class ContentItem(Base):
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now(),index=True)
 
     topic: Mapped["Topic"] = relationship(back_populates="topic_contents")
+    llmcall: Mapped[List["LLMCall"]] = relationship(back_populates="content_item")
+
+
+
+class LLMCall(Base):
+    __tablename__ = "llmcalls"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    content_item_id: Mapped[Optional[int]] = mapped_column(ForeignKey("content_items.id", ondelete="RESTRICT"), nullable=True)
+    purpose: Mapped[Purpose] = mapped_column(nullable=False)
+    model: Mapped[str] = mapped_column(nullable=False)
+    prompt_tokens: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    completion_tokens: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    cost_estimate: Mapped[Optional[Decimal]] = mapped_column(Numeric(16, 10), nullable=True)
+    latency_ms: Mapped[int] = mapped_column(Integer, nullable=False)
+    attempt: Mapped[int] = mapped_column(nullable=False)
+    succeeded: Mapped[bool] = mapped_column(nullable=False)
+    error: Mapped[Optional[str]] = mapped_column(nullable=True)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now(), index=True)
+
+    content_item: Mapped["ContentItem"] = relationship(back_populates="llmcall")

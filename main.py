@@ -7,6 +7,7 @@ from sqlalchemy import text
 from app.routers import (topics_router, contents_router)
 
 
+
 app = FastAPI()
 
 app.include_router(topics_router.router)
