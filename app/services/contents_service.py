@@ -1,4 +1,4 @@
-from app.repositories.contents_repo import get_contents_repo
+from app.repositories.contents_repo import get_contents_repo, get_content_item_by_id_repo
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.db_models import ContentItem, ContentType, Status
 from typing import Sequence
@@ -12,3 +12,13 @@ async def get_contents_service(session: AsyncSession, status: Status | None = No
                                        type=type, limit=limit, offset=offset)
 
     return contents
+
+
+
+async def get_content_item_by_id_service(session: AsyncSession, id: int) -> ContentItem:
+    result = await get_content_item_by_id_repo(session=session, id=id)
+
+    if result == None:
+        raise TypeError("Cannot be None")
+
+    return result

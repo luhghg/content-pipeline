@@ -21,3 +21,9 @@ class ContentItemResponse(BaseModel):
     updated_at: Optional[datetime]
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ContentItemUpdate(BaseModel):
+    status: Optional[Status] = None
+    title: Optional[str] = Field(default=None, max_length=255)
+    body: Optional[str] = None

@@ -55,8 +55,10 @@ class GroqProvider(Strategy):
                 {"role": "user", "content": prompt}
             ]
         )
+        print(response)
         elapsed_one = round((time.perf_counter() - t0) * 1000)
 
+        text = response.choices[0].message.content
         p_tokens = response.usage.prompt_tokens
         c_tokens = response.usage.completion_tokens
         cost_estimate = p_tokens * model_entry / 1_000_000 + c_tokens * model_exit / 1_000_000
@@ -66,7 +68,8 @@ class GroqProvider(Strategy):
                   "prompt_tokens": p_tokens,
                   "completion_tokens": c_tokens,
                   "cost_estimate": cost_estimate,
-                  "latency_ms": elapsed_one * 1000
+                  "latency_ms": elapsed_one,
+                  "text": text
                   }
         return answer
 

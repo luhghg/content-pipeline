@@ -9,7 +9,7 @@ class Settings(BaseSettings):
 
     MODEL_ENTRY : float = 0.075
     MODEL_EXIT : float = 0.30
-    MODEL_NAME : str = "llama-3.1-8B-instant"
+    MODEL_NAME : str = "openai/gpt-oss-20b"
 
     GROQ_API_KEY: str
 
