@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     DB_PASS : str
     DB_NAME : str
 
+    REDIS_HOST: str
+    REDIS_PORT: int
+
     MODEL_ENTRY : float = 0.075
     MODEL_EXIT : float = 0.30
     MODEL_NAME : str = "openai/gpt-oss-20b"

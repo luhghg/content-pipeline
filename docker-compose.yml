@@ -26,6 +26,7 @@ services:
       - .env
     environment:
       - DB_HOST=db
+      - REDIS_HOST=redis
     volumes:
     - .:/app
 
