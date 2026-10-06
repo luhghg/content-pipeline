@@ -1,6 +1,6 @@
 from app.db.session import Base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, func, ForeignKey, Text, BigInteger, Integer, Numeric
+from sqlalchemy import String, func, ForeignKey, Text, BigInteger, Integer, Numeric, CheckConstraint
 from enum import Enum
 from datetime import datetime
 from typing import List, Optional
@@ -29,6 +29,12 @@ class ApprovalType(Enum):
 class Purpose(Enum):
     GENERATION = "generation"
     QUALITYCHECK = "quality_check"
+
+class Verdict(Enum):
+    PASS = "pass"
+    DOUBTFUL = "doubtful"
+    FAIL = "fail"
+
 
 class Topic(Base):
     __tablename__ = "topics"
@@ -78,7 +84,7 @@ class ContentItem(Base):
 
     topic: Mapped["Topic"] = relationship(back_populates="topic_contents")
     llmcall: Mapped[List["LLMCall"]] = relationship(back_populates="content_item")
-
+    quality: Mapped[List["QualityCheck"]] = relationship(back_populates="content_check")
 
 
 class LLMCall(Base):
@@ -98,3 +104,17 @@ class LLMCall(Base):
     created_at: Mapped[datetime] = mapped_column(server_default=func.now(), index=True)
 
     content_item: Mapped["ContentItem"] = relationship(back_populates="llmcall")
+
+
+
+class QualityCheck(Base):
+    __tablename__ = "quality_checks"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    content_item_id: Mapped[int] = mapped_column(ForeignKey("content_items.id", ondelete="RESTRICT"))
+    verdict: Mapped[Optional[Verdict]]
+    score: Mapped[Optional[int]] = mapped_column(CheckConstraint("score >= 0 AND score <= 100", name="check_score_quality"),nullable=True)
+    reasons: Mapped[Optional[str]] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now(), index=True)
+
+    content_check: Mapped["ContentItem"] = relationship(back_populates="quality")

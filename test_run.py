@@ -5,7 +5,7 @@ from app.db.session import async_session
 from app.worker.config import main
 
 if __name__ == "__main__":
-    llm_data = asyncio.run(main(1))
+    llm_data = asyncio.run(main(2))
 
 
     print(llm_data)
