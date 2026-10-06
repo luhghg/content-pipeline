@@ -45,8 +45,10 @@ async def generate_content(session: AsyncSession, item_id: int):
 
         session.add(llm_call_model)
         await session.commit()
+        return True
 
     except Exception as e:
+        await session.rollback()
         finish_time = round((time.perf_counter() - start) * 1000)
         llm_call_model = LLMCall(
                                 content_item_id=item_id,
@@ -63,6 +65,10 @@ async def generate_content(session: AsyncSession, item_id: int):
 
         session.add(llm_call_model)
         await session.commit()
+        return False
+
+
+
 
 
 
@@ -93,7 +99,7 @@ async def quality_check(session: AsyncSession, content_id: int):
         if verdict == Verdict.PASS:
             content.status = Status.APPROVED
             content.approval_type = ApprovalType.AUTOMATIC
-            content.approved_at = datetime.now(timezone.utc)
+            content.approved_at = datetime.now()
         elif verdict == Verdict.DOUBTFUL:
             content.status = Status.NEEDS_REVIEW
 
@@ -107,6 +113,7 @@ async def quality_check(session: AsyncSession, content_id: int):
         await session.commit()
 
     except Exception as e:
+        await session.rollback()
         finish_time = round((time.perf_counter() - start) * 1000)
         llm_call_model = LLMCall(
                                  content_item_id=content_id,
