@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from groq import AsyncGroq
 from app.core.config import settings
+from app.models.db_models import ContentItem, Status
 
 import time
 
@@ -8,6 +9,16 @@ import time
 model_entry = settings.MODEL_ENTRY
 model_exit = settings.MODEL_EXIT
 model_name = settings.MODEL_NAME
+
+allowed_status = {
+                  Status.QUEUED: [Status.GENERATING],
+                  Status.GENERATING: [Status.CHECKING],
+                  Status.CHECKING: [Status.NEEDS_REVIEW, Status.APPROVED],
+                  Status.NEEDS_REVIEW: [Status.REJECTED, Status.APPROVED],
+                  Status.REJECTED: [],
+                  Status.APPROVED: []
+
+                 }
 
 client = AsyncGroq(
                   api_key=settings.GROQ_API_KEY
@@ -83,3 +94,13 @@ def get_llm_provider() -> Strategy:
         return GroqProvider()
 
     raise ValueError(f"Unknown provider {provider_name}")
+
+
+
+
+
+def transition(item: ContentItem, new_status: Status ):
+    if new_status in allowed_status[item.status] :
+        item.status = new_status
+    else:
+        raise ValueError(f"The attempt to transition from {item.status} to {new_status} failed due to an incorrect value.")
