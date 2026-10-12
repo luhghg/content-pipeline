@@ -9,6 +9,7 @@ import json
 from app.models.db_models import  Status, Verdict, ApprovalType
 from app.prompts.checker_prompt import to_check
 from datetime import datetime, timezone
+from app.LLM.LLM_functions import transition
 
 
 current_model = settings.MODEL_NAME
@@ -24,6 +25,7 @@ async def generate_content(session: AsyncSession, item_id: int):
     result = Context(strategy=current_provider)
     start = time.perf_counter()
     try:
+        transition(item=content, new_status=Status.GENERATING)
         response = await result.give_information(prompt=prompt)
         parsed = json.loads(response["text"])
         content_title = parsed["title"]
@@ -41,7 +43,7 @@ async def generate_content(session: AsyncSession, item_id: int):
                                 )
         content.title = content_title
         content.body = content_body
-        content.status = Status.CHECKING
+        transition(item=content, new_status=Status.CHECKING)
 
         session.add(llm_call_model)
         await session.commit()
@@ -97,11 +99,11 @@ async def quality_check(session: AsyncSession, content_id: int):
                                  succeeded=True,
                                 )
         if verdict == Verdict.PASS:
-            content.status = Status.APPROVED
+            transition(item=content, new_status=Status.APPROVED)
             content.approval_type = ApprovalType.AUTOMATIC
             content.approved_at = datetime.now()
         elif verdict == Verdict.DOUBTFUL:
-            content.status = Status.NEEDS_REVIEW
+           transition(item=content, new_status=Status.NEEDS_REVIEW)
 
         qc = QualityCheck(content_item_id=content_id,
                           verdict=verdict,
@@ -114,6 +116,7 @@ async def quality_check(session: AsyncSession, content_id: int):
 
     except Exception as e:
         await session.rollback()
+        await session.refresh(content)
         finish_time = round((time.perf_counter() - start) * 1000)
         llm_call_model = LLMCall(
                                  content_item_id=content_id,
@@ -132,7 +135,7 @@ async def quality_check(session: AsyncSession, content_id: int):
                                   score=None,
                                   reasons=None)
 
-        content.status = Status.NEEDS_REVIEW
+        transition(item=content, new_status=Status.NEEDS_REVIEW)
 
         session.add(llm_call_model)
         session.add(qc)

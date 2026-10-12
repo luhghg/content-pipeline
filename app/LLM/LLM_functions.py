@@ -66,7 +66,6 @@ class GroqProvider(Strategy):
                 {"role": "user", "content": prompt}
             ]
         )
-        print(response)
         elapsed_one = round((time.perf_counter() - t0) * 1000)
 
         text = response.choices[0].message.content
