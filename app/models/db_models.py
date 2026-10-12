@@ -35,6 +35,10 @@ class Verdict(Enum):
     DOUBTFUL = "doubtful"
     FAIL = "fail"
 
+class Desicion(Enum):
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
 
 class Topic(Base):
     __tablename__ = "topics"
@@ -85,6 +89,8 @@ class ContentItem(Base):
     topic: Mapped["Topic"] = relationship(back_populates="topic_contents")
     llmcall: Mapped[List["LLMCall"]] = relationship(back_populates="content_item")
     quality: Mapped[List["QualityCheck"]] = relationship(back_populates="content_check")
+    review_req: Mapped[List["ReviewRequest"]] = relationship(back_populates="content_req")
+
 
 
 class LLMCall(Base):
@@ -118,3 +124,19 @@ class QualityCheck(Base):
     created_at: Mapped[datetime] = mapped_column(server_default=func.now(), index=True)
 
     content_check: Mapped["ContentItem"] = relationship(back_populates="quality")
+
+
+class ReviewRequest(Base):
+    __tablename__ = "review_requests"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    content_item_id: Mapped[int] = mapped_column(ForeignKey("content_items.id", ondelete="RESTRICT"))
+    telegram_chat_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    telegram_message_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    reviewer_telegram_id: Mapped[Optional[int]] = mapped_column(BigInteger ,nullable=True)
+    sent_at: Mapped[datetime] = mapped_column(server_default=func.now(), index=True)
+    reminded_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
+    responded_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
+    desicion: Mapped[Optional[Desicion]] = mapped_column(nullable=True)
+
+    content_req: Mapped["ContentItem"] = relationship(back_populates="review_req")
