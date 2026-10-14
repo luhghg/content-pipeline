@@ -6,10 +6,13 @@ from app.models.db_models import LLMCall, Purpose, QualityCheck
 from app.core.config import settings
 import time
 import json
-from app.models.db_models import  Status, Verdict, ApprovalType
+from app.models.db_models import  Status, Verdict, ApprovalType, ReviewRequest
 from app.prompts.checker_prompt import to_check
 from datetime import datetime, timezone
 from app.LLM.LLM_functions import transition
+from app.repositories.quality_check_repo import get_quality_check_by_content_item_id
+from app.bot.handlers import send_message_to_check
+
 
 
 current_model = settings.MODEL_NAME
@@ -113,6 +116,7 @@ async def quality_check(session: AsyncSession, content_id: int):
         session.add(llm_call_model)
         session.add(qc)
         await session.commit()
+        return content.status
 
     except Exception as e:
         await session.rollback()
@@ -140,3 +144,21 @@ async def quality_check(session: AsyncSession, content_id: int):
         session.add(llm_call_model)
         session.add(qc)
         await session.commit()
+        return content.status
+
+
+
+
+async def request_review(session: AsyncSession, content_id: int):
+    content = await get_content_item_by_id_service(session=session, id=content_id)
+    quality = await get_quality_check_by_content_item_id(session=session, content_id=content.id)
+    message = f"title: {content.title}, body: {content.body}, reasons: {quality.reasons}"
+    send_message = await send_message_to_check(chat_id=settings.CHAT_ID, text=message)
+    print(f"send_message{send_message}")
+    review_request = ReviewRequest(content_item_id=content.id,
+                                   telegram_chat_id=send_message.chat.id,
+                                   telegram_message_id=send_message.message_id,
+                                   sent_at=datetime.now(),
+                                   )
+    session.add(review_request)
+    await session.commit()

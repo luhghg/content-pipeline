@@ -18,6 +18,10 @@ class Settings(BaseSettings):
 
     LLM_PROVIDER: str
 
+    BOT_TOKEN: str
+    TELEGRAM_ID: int
+    CHAT_ID: int
+
     @property
     def DATABASE_URL_asyncpg(self):
         return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASS}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
@@ -29,5 +33,3 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env")
 
 settings = Settings() #type: ignore
-
-

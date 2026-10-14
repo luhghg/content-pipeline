@@ -1,8 +1,9 @@
 from app.core.config import settings
 from arq.connections import RedisSettings
-from app.LLM.LLM_service import generate_content, quality_check
+from app.LLM.LLM_service import generate_content, quality_check, request_review
 from app.db.session import async_engine, async_session
 from arq import create_pool
+from app.models.db_models import Status
 
 
 
@@ -26,7 +27,15 @@ async def wrapper_arq_fun(ctx, item_id: int):
 
 async def wrapper_arq_quality_cheker(ctx, content_id: int):
     async with ctx["db_factory"]() as session:
-        await quality_check(session=session, content_id=content_id)
+        res = await quality_check(session=session, content_id=content_id)
+        if res == Status.NEEDS_REVIEW:
+            await ctx["redis"].enqueue_job("wrapper_arq_request_review", content_id=content_id)
+
+
+async def wrapper_arq_request_review(ctx, content_id: int):
+    async with ctx["db_factory"]() as session:
+        await request_review(session=session, content_id=content_id)
+
 
 
 async def main(item_id: int):
@@ -38,7 +47,7 @@ class WorkerSettings:
 
     redis_settings = REDIS_SETTINGS
 
-    functions = [wrapper_arq_fun, wrapper_arq_quality_cheker]
+    functions = [wrapper_arq_fun, wrapper_arq_quality_cheker, wrapper_arq_request_review]
 
     on_startup = startup
     on_shutdown = shutdown
