@@ -153,7 +153,7 @@ async def request_review(session: AsyncSession, content_id: int):
     content = await get_content_item_by_id_service(session=session, id=content_id)
     quality = await get_quality_check_by_content_item_id(session=session, content_id=content.id)
     message = f"title: {content.title}, body: {content.body}, reasons: {quality.reasons}"
-    send_message = await send_message_to_check(chat_id=settings.CHAT_ID, text=message)
+    send_message = await send_message_to_check(chat_id=settings.CHAT_ID, text=message, item_id=content_id)
     print(f"send_message{send_message}")
     review_request = ReviewRequest(content_item_id=content.id,
                                    telegram_chat_id=send_message.chat.id,
