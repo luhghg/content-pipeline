@@ -4,7 +4,8 @@ from typing import Annotated
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_session
 from sqlalchemy import text
-from app.routers import (topics_router, contents_router)
+from app.routers import (topics_router, contents_router,
+                         webhook_telegram_router)
 
 
 
@@ -12,7 +13,7 @@ app = FastAPI()
 
 app.include_router(topics_router.router)
 app.include_router(contents_router.router)
-
+app.include_router(webhook_telegram_router.router)
 
 
 
@@ -37,4 +38,3 @@ async def healthcheck(db: Annotated[AsyncSession, Depends(get_session)]):
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8080, reload=True)
-    asyncio.run(main())

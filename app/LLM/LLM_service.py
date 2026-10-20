@@ -6,13 +6,15 @@ from app.models.db_models import LLMCall, Purpose, QualityCheck
 from app.core.config import settings
 import time
 import json
-from app.models.db_models import  Status, Verdict, ApprovalType, ReviewRequest
+from app.models.db_models import  Status, Verdict, ApprovalType, ReviewRequest, Desicion
 from app.prompts.checker_prompt import to_check
 from datetime import datetime, timezone
 from app.LLM.LLM_functions import transition
 from app.repositories.quality_check_repo import get_quality_check_by_content_item_id
 from app.bot.handlers import send_message_to_check
-
+from app.repositories.review_request_repo import get_review_request_by_content_id
+from app.bot.handlers import answer_callback, remove_buttons
+from app.repositories.reviewer_repo import get_reviewer_by_telegram_id
 
 
 current_model = settings.MODEL_NAME
@@ -162,3 +164,43 @@ async def request_review(session: AsyncSession, content_id: int):
                                    )
     session.add(review_request)
     await session.commit()
+
+
+
+
+async def proces_review_desicion(session: AsyncSession, content_id: int, callback_data: str, tg_id: int, callback_query_id:str):
+    review_request = await get_review_request_by_content_id(session=session, content_id=content_id)
+    content = await get_content_item_by_id_service(session=session, id=content_id)
+    if review_request.responded_at is not None:
+        await answer_callback(callback_query_id=callback_query_id ,text="Already processed")
+        return
+    elif review_request.responded_at is None:
+        if callback_data == "accept":
+            await answer_callback(callback_query_id=callback_query_id, text="The article has been successfully approved!")
+            transition(item=content, new_status=Status.APPROVED)
+            content.approval_type = ApprovalType.MANUAL
+            res_by_id = await get_reviewer_by_telegram_id(session=session, telegram_id=tg_id)
+            content.approved_by_id = res_by_id.id
+            review_request.responded_at = datetime.now()
+            review_request.desicion = Desicion.APPROVED
+            review_request.reviewer_telegram_id = tg_id
+            await remove_buttons(chat_id=review_request.telegram_chat_id,
+                                 message_id=review_request.telegram_message_id,
+                                 text="✅Approved")
+
+            await session.commit()
+
+        elif callback_data == "reject":
+            await answer_callback(callback_query_id=callback_query_id ,text="The article has been successfully rejected!")
+            transition(item=content, new_status=Status.REJECTED)
+            content.approval_type = ApprovalType.MANUAL
+            res_by_id = await get_reviewer_by_telegram_id(session=session, telegram_id=tg_id)
+            content.approved_by_id = res_by_id.id
+            review_request.responded_at = datetime.now()
+            review_request.desicion = Desicion.REJECTED
+            review_request.reviewer_telegram_id = tg_id
+            await remove_buttons(chat_id=review_request.telegram_chat_id,
+                                message_id=review_request.telegram_message_id,
+                                text="❌Rejected")
+
+            await session.commit()
