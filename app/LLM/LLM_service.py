@@ -6,6 +6,7 @@ from app.models.db_models import LLMCall, Purpose, QualityCheck
 from app.core.config import settings
 import time
 import json
+import asyncio
 from app.models.db_models import  Status, Verdict, ApprovalType, ReviewRequest, Desicion
 from app.prompts.checker_prompt import to_check
 from datetime import datetime, timezone
@@ -21,6 +22,8 @@ current_model = settings.MODEL_NAME
 
 async def generate_content(session: AsyncSession, item_id: int):
     content = await get_content_item_by_id_service(session=session, id=item_id)
+    if content.status != Status.QUEUED:
+        return False
     prompt = title_body_prompt(title=content.topic.title,
                                content_type=content.content_type,
                                prompt_hint=content.topic.prompt_hint
@@ -31,7 +34,31 @@ async def generate_content(session: AsyncSession, item_id: int):
     start = time.perf_counter()
     try:
         transition(item=content, new_status=Status.GENERATING)
-        response = await result.give_information(prompt=prompt)
+        for one_try in range(1,4):
+            try:
+                response = await result.give_information(prompt=prompt)
+                break
+            except Exception as e :
+                if one_try == 1:
+                    await asyncio.sleep(1)
+                elif one_try == 2:
+                    await asyncio.sleep(4)
+                elif one_try == 3:
+                    await asyncio.sleep(16)
+                llmcall_obj = LLMCall(content_item_id=item_id,
+                                                purpose=Purpose.GENERATION,
+                                                model=current_model,
+                                                prompt_tokens=None,
+                                                completion_tokens=None,
+                                                cost_estimate=None,
+                                                latency_ms=0,
+                                                attempt=one_try,
+                                                error=str(e),
+                                                succeeded=False)
+                session.add(llmcall_obj)
+                await session.commit()
+
+
         parsed = json.loads(response["text"])
         content_title = parsed["title"]
         content_body = parsed["body"]
@@ -43,7 +70,7 @@ async def generate_content(session: AsyncSession, item_id: int):
                                  completion_tokens=response["completion_tokens"],
                                  cost_estimate=response["cost_estimate"],
                                  latency_ms=response["latency_ms"],
-                                 attempt=1,
+                                 attempt=one_try,
                                  succeeded=True,
                                 )
         content.title = content_title
@@ -88,7 +115,31 @@ async def quality_check(session: AsyncSession, content_id: int):
     result = Context(strategy=current_provider)
     start = time.perf_counter()
     try:
-        response = await result.give_information(prompt=prompt)
+        for one_try in range(1,4):
+            try:
+                response = await result.give_information(prompt=prompt)
+                break
+            except Exception as e:
+                if one_try == 1:
+                    await asyncio.sleep(1)
+                elif one_try == 2:
+                    await asyncio.sleep(4)
+                elif one_try == 3:
+                    await asyncio.sleep(16)
+                llmcall_obj = LLMCall(content_item_id=content.id,
+                                    purpose=Purpose.QUALITYCHECK,
+                                    model=current_model,
+                                    prompt_tokens=None,
+                                    completion_tokens=None,
+                                    cost_estimate=None,
+                                    latency_ms=0,
+                                    attempt=one_try,
+                                    error=str(e),
+                                    succeeded=False)
+                session.add(llmcall_obj)
+                await session.commit()
+
+
         parsed = json.loads(response["text"])
         verdict = Verdict(parsed["verdict"])
         score = parsed["score"]
@@ -100,7 +151,7 @@ async def quality_check(session: AsyncSession, content_id: int):
                                  completion_tokens=response["completion_tokens"],
                                  cost_estimate=response["cost_estimate"],
                                  latency_ms=response["latency_ms"],
-                                 attempt=1,
+                                 attempt=one_try,
                                  succeeded=True,
                                 )
         if verdict == Verdict.PASS:
