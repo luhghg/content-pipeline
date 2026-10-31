@@ -7,6 +7,7 @@ from typing import List, Optional
 from decimal import Decimal
 
 
+
 class ContentType(Enum):
     ARTICLE = "article"
     TWEET = "tweet"
@@ -38,6 +39,12 @@ class Verdict(Enum):
 class Desicion(Enum):
     APPROVED = "approved"
     REJECTED = "rejected"
+
+class JobStatus(Enum):
+    RUNNING = "running"
+    SUCCESS = "success"
+    FAILED = "failed"
+
 
 
 class Topic(Base):
@@ -140,3 +147,26 @@ class ReviewRequest(Base):
     desicion: Mapped[Optional[Desicion]] = mapped_column(nullable=True)
 
     content_req: Mapped["ContentItem"] = relationship(back_populates="review_req")
+
+
+class ScheduleRule(Base):
+    __tablename__ = "schedule_rules"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    content_type: Mapped[ContentType] = mapped_column(nullable=False)
+    cron_expression: Mapped[str] = mapped_column(nullable=False)
+    items_per_run: Mapped[int] = mapped_column(nullable=False)
+    is_active: Mapped[bool] = mapped_column(default=True, server_default="true", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now(), index=True)
+
+
+class JobRun(Base):
+    __tablename__ = "jobs_run"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    job_name: Mapped[str] = mapped_column(nullable=False)
+    started_at: Mapped[datetime] = mapped_column(server_default=func.now(), index=True)
+    finished_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
+    status: Mapped[JobStatus] = mapped_column(nullable=False)
+    items_processed: Mapped[int] = mapped_column(nullable=False)
+    error: Mapped[Optional[str]] = mapped_column(nullable=True)
