@@ -158,6 +158,7 @@ class ScheduleRule(Base):
     items_per_run: Mapped[int] = mapped_column(nullable=False)
     is_active: Mapped[bool] = mapped_column(default=True, server_default="true", nullable=False)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now(), index=True)
+    next_launch: Mapped[datetime] = mapped_column(nullable=False)
 
 
 class JobRun(Base):

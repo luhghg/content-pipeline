@@ -7,16 +7,18 @@ from app.core.config import settings
 import time
 import json
 import asyncio
-from app.models.db_models import  Status, Verdict, ApprovalType, ReviewRequest, Desicion
+from app.models.db_models import  Status, Verdict, ApprovalType, ReviewRequest, Desicion, ContentItem
 from app.prompts.checker_prompt import to_check
-from datetime import datetime, timezone
+from datetime import datetime
 from app.LLM.LLM_functions import transition
 from app.repositories.quality_check_repo import get_quality_check_by_content_item_id
 from app.bot.handlers import send_message_to_check
 from app.repositories.review_request_repo import get_review_request_by_content_id
 from app.bot.handlers import answer_callback, remove_buttons
 from app.repositories.reviewer_repo import get_reviewer_by_telegram_id
-
+from app.repositories.schedule_rules_repo import get_schedule_rules_repo
+from app.repositories.topics_repo import serch_the_last_one_active_topic_repo
+from croniter import croniter
 
 current_model = settings.MODEL_NAME
 
@@ -255,3 +257,21 @@ async def proces_review_desicion(session: AsyncSession, content_id: int, callbac
                                 text="❌Rejected")
 
             await session.commit()
+
+
+async def plan_cotent(session: AsyncSession):
+    rules =  await get_schedule_rules_repo(session=session)
+    for rule in rules:
+        for _ in range(1, rule.items_per_run + 1):
+            topic = await serch_the_last_one_active_topic_repo(session=session, content_type=rule.content_type)
+            if topic is not None:
+                new_content = ContentItem(topic_id=topic.id,
+                                          content_type=topic.content_type,
+                                          status=Status.QUEUED,
+                                         )
+                topic.last_used_at = datetime.now()
+                session.add(new_content)
+        calculator = croniter(rule.cron_expression, datetime.now())
+        rule.next_launch = calculator.get_next(datetime)
+    await session.commit()
+    
