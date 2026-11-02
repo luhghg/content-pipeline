@@ -35,3 +35,10 @@ async def get_content_item_by_id_repo(session: AsyncSession, id: int) -> Content
     result = await session.execute(query)
     return result.scalar_one_or_none()
 
+
+async def get_content_item_repo(session: AsyncSession) -> Sequence[ContentItem] :
+    query = (
+        select(ContentItem)
+    )
+    result = await session.execute(query)
+    return result.scalars().all()

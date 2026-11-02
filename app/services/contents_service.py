@@ -1,8 +1,9 @@
-from app.repositories.contents_repo import get_contents_repo, get_content_item_by_id_repo
+from app.repositories.contents_repo import get_contents_repo, get_content_item_by_id_repo, get_content_item_repo
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.db_models import ContentItem, ContentType, Status
 from typing import Sequence
-
+from collections import defaultdict
+from app.schemas.contents_schemas import ContentItemResponse
 
 
 
@@ -22,3 +23,12 @@ async def get_content_item_by_id_service(session: AsyncSession, id: int) -> Cont
         raise TypeError("Cannot be None")
 
     return result
+
+
+async def get_grouped_items_by_status (session: AsyncSession) -> dict[Status, list[ContentItemResponse]]:
+    items = await get_content_item_repo(session=session)
+    grouped_by_status = defaultdict(list)
+    for item in items:
+        response_model = ContentItemResponse.model_validate(item)
+        grouped_by_status[response_model.status].append(response_model)
+    return grouped_by_status

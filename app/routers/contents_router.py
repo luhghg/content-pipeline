@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends
-from app.services.contents_service import get_contents_service
+from app.services.contents_service import get_contents_service, get_grouped_items_by_status
 from app.db.session import get_session
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Annotated
 from app.schemas.contents_schemas import ContentItemResponse
 from app.models.db_models import Status, ContentType
-
+from app.models.db_models import ContentItem
 
 
 
@@ -19,4 +19,10 @@ async def get_contents(session: Annotated[AsyncSession, Depends(get_session)],
     contents = await get_contents_service(session=session, status=status,
                                           type=type, limit=limit, offset=offset)
 
-    return contents 
+    return contents
+
+
+@router.get(path="/board" ,response_model=dict[Status, list[ContentItemResponse]])
+async def kanban_board(session: Annotated[AsyncSession, Depends(get_session)]) -> dict[Status, list[ContentItemResponse]]:
+    result = await get_grouped_items_by_status(session=session)
+    return result
