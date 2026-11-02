@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_session
 from sqlalchemy import text
 from app.routers import (topics_router, contents_router,
-                         webhook_telegram_router)
+                         webhook_telegram_router, board_router)
 
 
 
@@ -14,6 +14,7 @@ app = FastAPI()
 app.include_router(topics_router.router)
 app.include_router(contents_router.router)
 app.include_router(webhook_telegram_router.router)
+app.include_router(board_router.router)
 
 
 
