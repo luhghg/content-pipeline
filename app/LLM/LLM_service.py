@@ -260,6 +260,7 @@ async def proces_review_desicion(session: AsyncSession, content_id: int, callbac
 
 
 async def plan_cotent(session: AsyncSession):
+    list_of_new_content = []
     rules =  await get_schedule_rules_repo(session=session)
     for rule in rules:
         for _ in range(1, rule.items_per_run + 1):
@@ -271,7 +272,11 @@ async def plan_cotent(session: AsyncSession):
                                          )
                 topic.last_used_at = datetime.now()
                 session.add(new_content)
+                list_of_new_content.append(new_content)
         calculator = croniter(rule.cron_expression, datetime.now())
         rule.next_launch = calculator.get_next(datetime)
     await session.commit()
-    
+    list_of_items_id = []
+    for item_id in list_of_new_content:
+        list_of_items_id.append(item_id.id)
+    return list_of_items_id

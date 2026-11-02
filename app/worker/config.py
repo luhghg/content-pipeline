@@ -42,7 +42,10 @@ async def wrapper_proces_review_desicion(ctx, content_id: int, callback_data: st
 
 async def wrapper_plan_content(ctx):
     async with ctx["db_factory"]() as session:
-        await plan_cotent(session=session)
+        results = await plan_cotent(session=session)
+        for result in results:
+            await ctx["redis"].enqueue_job("wrapper_arq_fun", item_id=result)
+
 
 
 
