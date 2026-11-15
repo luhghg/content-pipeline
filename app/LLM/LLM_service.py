@@ -33,6 +33,7 @@ async def generate_content(session: AsyncSession, item_id: int):
     current_provider =  get_llm_provider()
 
     result = Context(strategy=current_provider)
+    response = None
     start = time.perf_counter()
     try:
         transition(item=content, new_status=Status.GENERATING)
@@ -59,6 +60,10 @@ async def generate_content(session: AsyncSession, item_id: int):
                                                 succeeded=False)
                 session.add(llmcall_obj)
                 await session.commit()
+        if response is None:
+            transition(item=content, new_status=Status.FAILED)
+            await session.commit()
+            return False
 
 
         parsed = json.loads(response["text"])

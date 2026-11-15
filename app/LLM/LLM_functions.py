@@ -11,8 +11,8 @@ model_exit = settings.MODEL_EXIT
 model_name = settings.MODEL_NAME
 
 allowed_status = {
-                  Status.QUEUED: [Status.GENERATING],
-                  Status.GENERATING: [Status.CHECKING],
+                  Status.QUEUED: [Status.GENERATING, Status.FAILED],
+                  Status.GENERATING: [Status.CHECKING, Status.FAILED],
                   Status.CHECKING: [Status.NEEDS_REVIEW, Status.APPROVED],
                   Status.NEEDS_REVIEW: [Status.REJECTED, Status.APPROVED],
                   Status.REJECTED: [],

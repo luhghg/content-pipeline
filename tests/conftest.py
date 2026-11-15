@@ -7,7 +7,9 @@ from sqlalchemy.ext.asyncio import (AsyncSession, create_async_engine,
                                     )
 from app.LLM.LLM_functions import Strategy
 import json
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, select, func
+from app.models.db_models import ContentItem, LLMCall
+
 
 @pytest.fixture(scope="session")
 def prepare_database():
@@ -48,6 +50,14 @@ class Zaglushka(Strategy):
 
 
 
+class VNZaglushka(Strategy):
+     async def generate(self, prompt: str):
+            raise Exception("Error")
+
+
+
+
+
 async def fake_send_message_to_check(chat_id: int, text: str ,item_id: int):
     class Fake():
         def __init__(self):
@@ -67,3 +77,13 @@ async def fake_answer_callback(callback_query_id: str, text: str):
 
 async def fake_remove_buttons(chat_id: int, message_id: int, text: str):
     return
+
+
+
+async def go_to_db_for_llm_obj(session: AsyncSession, content_item_id: int):
+    query = (
+        select(func.count(LLMCall.id))
+        .where(LLMCall.content_item_id == content_item_id)
+    )
+    res = await session.execute(query)
+    return res.scalar()
